@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "RideWithMe",
+    "slug": "ridewithme",
+    "scheme": "ridewithme",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "backgroundColor": "#07111f"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": { "supportsTablet": false },
+    "android": {},
+    "plugins": [
+      "expo-router",
+      "expo-location",
+      "expo-secure-store"
+    ]
+  }
+}

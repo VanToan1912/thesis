@@ -1,0 +1,150 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  RIDER
+  DRIVER
+  ADMIN
+}
+
+enum DriverStatus {
+  OFFLINE
+  ONLINE
+  IN_TRIP
+}
+
+enum RideType {
+  AUTO
+  SEDAN
+  SUV
+}
+
+enum TripStatus {
+  REQUESTED
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  REQUIRES_PAYMENT
+  PROCESSING
+  SUCCEEDED
+  FAILED
+}
+
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String?
+  name         String
+  phone        String?
+  avatarUrl    String?
+  role         UserRole  @default(RIDER)
+  provider     AuthProvider @default(EMAIL)
+  googleSub    String?   @unique
+  onboardingCompleted Boolean @default(false)
+  marketingOptIn      Boolean @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  rider        Rider?
+  driver       Driver?
+  trips        Trip[]    @relation("RiderTrips")
+  payments     Payment[]
+}
+
+model Rider {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recentSearches Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Driver {
+  id            String       @id @default(cuid())
+  userId        String       @unique
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status        DriverStatus @default(OFFLINE)
+  currentLat    Float
+  currentLng    Float
+  rating        Float        @default(5)
+  vehicleId     String?
+  vehicle       Vehicle?     @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  trips         Trip[]       @relation("DriverTrips")
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model Vehicle {
+  id             String   @id @default(cuid())
+  model          String
+  type           RideType
+  licenseNumber  String   @unique
+  color          String?
+  capacity       Int      @default(4)
+  driver         Driver?
+}
+
+model Trip {
+  id               String       @id @default(cuid())
+  riderId          String
+  rider            User         @relation("RiderTrips", fields: [riderId], references: [id], onDelete: Cascade)
+  driverId         String?
+  driver           User?        @relation("DriverTrips", fields: [driverId], references: [id], onDelete: SetNull)
+  rideType         RideType
+  status           TripStatus   @default(REQUESTED)
+  paymentStatus    PaymentStatus @default(REQUIRES_PAYMENT)
+  pickupAddress    String
+  pickupLat        Float
+  pickupLng        Float
+  dropoffAddress   String
+  dropoffLat       Float
+  dropoffLng       Float
+  distanceKm       Float
+  durationMinutes  Int
+  fare             Float
+  routePolyline    String?
+  driverMatchedAt  DateTime?
+  startedAt        DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  payment          Payment?
+}
+
+model Payment {
+  id                    String        @id @default(cuid())
+  userId                String
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tripId                String?       @unique
+  trip                  Trip?         @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  gatewayTransactionId   String?       @unique
+  status                PaymentStatus  @default(REQUIRES_PAYMENT)
+  amount                Float
+  currency              String        @default("VND")
+  metadata             Json?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+}
+
+model AdminAuditLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  action    String
+  payload   Json?
+  createdAt DateTime @default(now())
+}
